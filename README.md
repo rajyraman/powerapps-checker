@@ -59,7 +59,7 @@ jobs:
                                 
       - name: Power Apps Checker
         id: powerapps-checker
-        uses: rajyraman/powerapps-checker@v1.1
+        uses: rajyraman/powerapps-checker@v1.2
         with: 
           token: ${{ secrets.GITHUB_TOKEN }}
           solutionName: ${{ github.event.inputs.solutionName }}
