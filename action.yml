@@ -75,7 +75,7 @@ runs:
       id: export-powerapps-checker-results
       shell: powershell
       run: |
-        mkdir PowerAppsSolutionChecker
+        mkdir PowerAppsSolutionChecker -ErrorAction Ignore
         Expand-Archive -LiteralPath ${{ steps.powerapps-checker.outputs.sarifZipFile }} -DestinationPath PowerAppsSolutionChecker -Force -Verbose
         $sarifFile = '${{ steps.powerapps-checker.outputs.sarifZipFile }}' -replace 'zip','sarif'
         $result = Get-Content "PowerAppsSolutionChecker/$sarifFile" | 
