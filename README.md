@@ -25,18 +25,18 @@ This Action runs Power Apps Checker against the specified solution and creates a
 ## Example
 
 ```yaml
-# This is a basic workflow to help you get started with Actions
-
-name: solution-checker
+name: powerapps-solution-checker-sample
 on:
   workflow_dispatch:
     inputs:
       solutionName:
         description: "Solution Name"
         required: true
+        default: 'Solution Name'
       sourceEnvironmentUrl:
         description: "Source Environment URL"
         required: true
+        default: 'https://xxxx.crm.dynamics.com'       
       ruleSet:
         description: "Rule Set"
         required: true
@@ -45,31 +45,20 @@ on:
         description: "Geography"
         required: true
         default: 'Australia'                           
-      debug:
-        description: "Debug?"
-        required: true
-        default: 'true'                      
+      saveResults:
+        description: "Save results of Power Apps Solution Checker"
+        required: false
+        default: "true"                              
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: windows-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-        
-      - name: Dump GitHub context
-        if: github.event.inputs.debug == 'true'
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
                                 
-      - name: Solution Checker Solution
-        id: solution-checker
+      - name: Solution Checker
+        id: powerapps-solution-checker
         uses: rajyraman/powerapps-solution-checker@v1
         with: 
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -79,6 +68,15 @@ jobs:
           applicationSecret: ${{ secrets.APPLICATION_SECRET }}
           tenantId: ${{ secrets.TENANT_ID }}
           geography: ${{ github.event.inputs.geography }}
+          saveResults: ${{ github.event.inputs.saveResults }}
+          
+      # Ideally, you would have a deploy step here, which should be blocked until issues identified by the Power Apps Solution checker have been resolved         
+      - run: echo "Solution Checker identified issues. DON'T deploy."
+        if: steps.powerapps-checker.outputs.issueNumber != ''
+        
+      - run: echo "AOK. Deploy."
+        if: steps.powerapps-checker.outputs.issueNumber == ''        
+
 ```
 
 
