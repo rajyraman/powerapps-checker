@@ -1,4 +1,4 @@
-name: powerapps-solution-checker
+name: powerapps-checker
 author: Natraj Yegnaraman
 description: "Check the quality of the Solution using Power Apps Checker"
 branding:
