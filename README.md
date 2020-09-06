@@ -57,9 +57,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
                                 
-      - name: Solution Checker
-        id: powerapps-solution-checker
-        uses: rajyraman/powerapps-solution-checker@v1
+      - name: Power Apps Checker
+        id: powerapps-checker
+        uses: rajyraman/powerapps-checker@v1.1
         with: 
           token: ${{ secrets.GITHUB_TOKEN }}
           solutionName: ${{ github.event.inputs.solutionName }}
