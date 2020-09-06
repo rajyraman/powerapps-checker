@@ -38,7 +38,10 @@ inputs:
     description: "Application Secret"
     required: false
     default: "en"
-
+  saveResults:
+    description: "Save results of Power Apps Solution Checker"
+    required: false
+    default: "true"
 runs:
   using: composite
 
@@ -94,11 +97,13 @@ runs:
             Out-File -FilePath recommendations.md -InputObject $recommendations
             echo "::set-output name=issueBody::$recommendations"
             
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add "PowerAppsSolutionChecker/$sarifFile"
-            git commit -m "Add Power Apps Solution Checker results for ${{ inputs.solutionName }}"
-            git  -c http.extraheader="AUTHORIZATION: Bearer ${{ inputs.token }}" push origin master            
+            if('${{ inputs.saveResults }}' -eq 'true') {
+                git config --local user.email "action@github.com"
+                git config --local user.name "GitHub Action"
+                git add "PowerAppsSolutionChecker/$sarifFile"
+                git commit -m "Add Power Apps Solution Checker results for ${{ inputs.solutionName }}"
+                git  -c http.extraheader="AUTHORIZATION: Bearer ${{ inputs.token }}" push origin master
+            }
         }
         else 
         {
