@@ -1,0 +1,124 @@
+name: powerapps-solution-checker
+author: Natraj Yegnaraman
+description: "Check the quality of the Solution using Power Apps Checker"
+branding:
+  icon: "zap"
+  color: "blue"
+outputs:
+    issueNumber:
+      description: "Power Apps Solution Checker Issue"
+      value: ${{ steps.create-issue.outputs.issueNumber }}
+inputs:
+  token:
+    description: "GitHub Token"
+    required: true
+  solutionName:
+    description: "Solution Name"
+    required: true
+  sourceEnvironmentUrl:
+    description: "Source Environment URL"
+    required: true
+  applicationId:
+    description: "Application Id"
+    required: true
+  applicationSecret:
+    description: "Application Secret"
+    required: true
+  tenantId:
+    description: "Tenant Id"
+    required: true
+  ruleSet:
+    description: "Rule Set"
+    required: false
+    default: "Solution Checker"
+  geography:
+    description: "Geography"
+    required: true
+  locale:
+    description: "Application Secret"
+    required: false
+    default: "en"
+
+runs:
+  using: composite
+
+  steps:
+    - run: echo "::set-env name=GIT_REDIRECT_STDERR::2>&1"
+      shell: powershell
+
+    - id: set-params
+      run: echo "::set-output name=connectionString::AuthType=ClientSecret;Url=${{ inputs.sourceEnvironmentUrl }};ApplicationId=${{ inputs.applicationId }};Secret=${{ inputs.applicationSecret }}"
+      shell: powershell
+
+    - name: Export Solution
+      id: export-solution
+      shell: powershell
+      run: |
+        Install-Module -Name Xrm.Framework.CI.PowerShell.Cmdlets -Confirm:$false -Verbose -Force
+        $solution = Export-XrmSolution -ConnectionString "${{ steps.set-params.outputs.connectionString }}" -Managed $false -UniqueSolutionName ${{ inputs.solutionName }} -IncludeVersionInName $true -OutputFolder . -Verbose
+        echo "::set-output name=solutionName::$solution"
+
+    - name: Run Power Apps Checker
+      id: powerapps-checker
+      shell: powershell
+      run: |
+        Install-Module Microsoft.PowerApps.Checker.PowerShell -Confirm:$false -Verbose -Force
+        $ruleSets = Get-PowerAppsCheckerRulesets -Geography ${{ inputs.geography }}
+        $ruleSetToUse = $ruleSets | where Name -eq "${{ inputs.ruleSet }}"
+        $checker = Invoke-PowerAppsChecker -Geography ${{ inputs.geography }} -ClientApplicationId ${{ inputs.applicationId }} -TenantId ${{ inputs.tenantId }} -Ruleset $rulesetToUse -FileUnderAnalysis ${{ steps.export-solution.outputs.solutionName }}  -OutputDirectory . -ClientApplicationSecret (ConvertTo-SecureString -AsPlainText -Force -String "${{ inputs.applicationSecret }}")
+        echo "::set-output name=sarifZipFile::$($checker.DownloadedResultFiles)"
+
+    - name: Export Power Apps Checker Results
+      id: export-powerapps-checker-results
+      shell: powershell
+      run: |
+        mkdir PowerAppsSolutionChecker
+        Expand-Archive -LiteralPath ${{ steps.powerapps-checker.outputs.sarifZipFile }} -DestinationPath PowerAppsSolutionChecker -Force -Verbose
+        $sarifFile = '${{ steps.powerapps-checker.outputs.sarifZipFile }}' -replace 'zip','sarif'
+        $result = Get-Content "PowerAppsSolutionChecker/$sarifFile" | 
+        ConvertFrom-Json | 
+        select -expand runs | 
+        select -expand results
+        
+        if($result -ne $null) {
+            $result = $result | select properties,locations,message | 
+            select @{Name = "| Severity "; Expression = { "#$($_.properties.severity) |" }},
+            @{Name = "| Component "; Expression = { " $($_.locations.physicalLocation.artifactLocation.uri) |" }}, 
+            @{Name = "| LocationFullyQualifiedName "; Expression = { " $($_.locations.logicalLocations.fullyQualifiedName) |" }}, 
+            @{Name = "| M "; Expression = { " $($_.message.text) |" }} |
+            Out-String -Width 1024
+
+            $result = $result.Substring($result.IndexOf('#')) -replace '#',''
+            $recommendations = "| Severity | Component | Fully Qualified Name | Recommendation |`r`n"
+            $recommendations = $recommendations + "| - | - | - | - |`r`n" + $result            
+            Out-File -FilePath recommendations.md -InputObject $recommendations
+            echo "::set-output name=issueBody::$recommendations"
+            
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add "PowerAppsSolutionChecker/$sarifFile"
+            git commit -m "Add Power Apps Solution Checker results for ${{ inputs.solutionName }}"
+            git  -c http.extraheader="AUTHORIZATION: Bearer ${{ inputs.token }}" push origin master            
+        }
+        else 
+        {
+            echo "There are no recommendations"
+        }
+        
+    - name: Create Issue
+      id: create-issue
+      shell: powershell
+      run: |
+        if('${{ steps.export-powerapps-checker-results.outputs.issueBody }}' -ne '') {
+            Install-Module -Name PowerShellForGitHub -Confirm:$false -Verbose -Force
+
+            $tokenEncrypted = ConvertTo-SecureString -String ${{ inputs.token }} -AsPlainText -Force
+            $cred = New-Object System.Management.Automation.PSCredential "ignore", $tokenEncrypted
+            Set-GitHubAuthentication -Credential $cred
+            Set-GitHubConfiguration -DefaultOwnerName ${{ github.repository_owner }}
+            Set-GitHubConfiguration -DefaultRepositoryName $('${{ github.repository }}' -replace '${{ github.repository_owner }}/', '')
+            Set-GitHubConfiguration -DisableTelemetry -LogRequestBody
+            $issueBody = Get-Content recommendations.md | Out-String
+            $issue = New-GitHubIssue -Title "Power Apps Checker Results for ${{ steps.export-solution.outputs.solutionName }}" -Body $issueBody
+            echo "::set-output name=issueNumber::$($issue.IssueNumber)"
+        }
