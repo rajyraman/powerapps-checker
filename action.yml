@@ -124,6 +124,6 @@ runs:
             Set-GitHubConfiguration -DefaultRepositoryName $('${{ github.repository }}' -replace '${{ github.repository_owner }}/', '')
             Set-GitHubConfiguration -DisableTelemetry -LogRequestBody
             $issueBody = Get-Content recommendations.md | Out-String
-            $issue = New-GitHubIssue -Title "Power Apps Checker Results for ${{ steps.export-solution.outputs.solutionName }}" -Body $issueBody
+            $issue = New-GitHubIssue -Title "Power Apps Checker Results for ${{ inputs.solutionName }}" -Body $issueBody
             echo "::set-output name=issueNumber::$($issue.IssueNumber)"
         }
