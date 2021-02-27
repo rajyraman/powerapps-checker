@@ -12,6 +12,10 @@ inputs:
   token:
     description: "GitHub Token"
     required: true
+  branch:
+    description: "Branch name to commit the changes to"
+    required: false
+    default: "main"    
   solutionName:
     description: "Solution Name"
     required: true
@@ -102,7 +106,7 @@ runs:
                 git config --local user.name "GitHub Action"
                 git add "PowerAppsSolutionChecker/$sarifFile"
                 git commit -m "Add Power Apps Solution Checker results for ${{ inputs.solutionName }}"
-                git  -c http.extraheader="AUTHORIZATION: Bearer ${{ inputs.token }}" push origin master
+                git  -c http.extraheader="AUTHORIZATION: Bearer ${{ inputs.token }}" push origin ${{ inputs.branch }}
             }
         }
         else 
