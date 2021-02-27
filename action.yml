@@ -46,7 +46,7 @@ runs:
   using: composite
 
   steps:
-    - run: echo "::set-env name=GIT_REDIRECT_STDERR::2>&1"
+    - run: echo "GIT_REDIRECT_STDERR=2>&1" >> $GITHUB_ENV
       shell: powershell
 
     - id: set-params
