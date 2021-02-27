@@ -15,6 +15,7 @@ This Action runs Power Apps Checker against the specified solution and creates a
 | ruleSet |  | Solution Checker | Solution Checker or AppSource Certification |
 | geography | ✅ | - | PreviewUnitedStates, UnitedStates, Europe, Asia, Australia, Japan, India, Canada, SouthAmerica, UnitedKingdom, France, UnitedArabEmirates, USGovernment, USGovernmentL4, USGovernmentL5DoD, China | 
 | locale |  | en | bg, ca, cs, da, de, el, en, es, et, eu, fi, fr, gl, hi, hr, hu, id, it, ja, kk, ko, lt, lv, ms, nb, nl, pl, pt-BR, pt-pt, ro, ru, sk, sl, sr-Cyrl-RS, sr-Latn-RS, sv, th, tr, uk, vi, zh-HANS, zh-HANT |
+| branch               |          | main    | Branch to push the solution components to.         
 
 ## Outputs
 
